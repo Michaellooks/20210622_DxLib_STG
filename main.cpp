@@ -8,6 +8,8 @@
 
 //構造体の定義
 
+//マクロ定義
+#define TAMA_DIV_MAX	4	//弾の画像の最大数
 
 //画像の構造体
 struct IMAGE
@@ -61,63 +63,68 @@ struct AUDIO
 
 //グローバル変数
 //シーンを管理する変数
-GAME_SCENE GameScene;		//	現在のゲームのシーン
-GAME_SCENE OldGameScene;	//	前回のゲームのシーン
-GAME_SCENE NextGameScene;	//	次のゲームのシーン
+GAME_SCENE GameScene;							//	現在のゲームのシーン
+GAME_SCENE OldGameScene;						//	前回のゲームのシーン
+GAME_SCENE NextGameScene;						//	次のゲームのシーン
 
 //画面の切り替え
-BOOL IsFadeOut = FALSE;		//	フェードアウト
-BOOL IsFadeIn = FALSE;		//	フェードイン
+BOOL IsFadeOut = FALSE;							//	フェードアウト
+BOOL IsFadeIn = FALSE;							//	フェードイン
 
 int fadeTimeMill = 2000;						//	切り替えミリ秒
 int fadeTimeMax = fadeTimeMill / 1000 * 60;		//	ミリ秒をフレーム秒に変換
 
 //フェードアウト
-int fadeOutCntInit = 0;				//初期値
-int fadeOutCnt = fadeOutCntInit;	//フェードアウトのカウンタ
-int fadeOutCntMax = fadeTimeMax;	//フェードアウトのカウンタMAX
+int fadeOutCntInit = 0;							//初期値
+int fadeOutCnt = fadeOutCntInit;				//フェードアウトのカウンタ
+int fadeOutCntMax = fadeTimeMax;				//フェードアウトのカウンタMAX
 
 //フェードイン
-int fadeInCntInit = fadeTimeMax;	//初期値
-int fadeInCnt = fadeInCntInit;		//フェードアウトのカウンタ
-int fadeInCntMax = fadeTimeMax;		//フェードアウトのカウンタMAX
+int fadeInCntInit = fadeTimeMax;				//初期値
+int fadeInCnt = fadeInCntInit;					//フェードアウトのカウンタ
+int fadeInCntMax = fadeTimeMax;					//フェードアウトのカウンタMAX
+
+//弾のハンドル
+int Tama[TAMA_DIV_MAX];
+int TamaIndex = 0;								//画像の添字
+int TanaChangeCnt = 0;							//画像を変えるタイミング
+int TanaChangeCntMax = 30;						//画像を変えるタイミングMAX
 
 //プロトタイプ宣言
-VOID Title(VOID);							//	タイトル画面
-VOID TitleProc(VOID);						//	タイトル画面（処理）
-VOID TitleDraw(VOID);						//	タイトル画面（描画）
+VOID Title(VOID);								//	タイトル画面
+VOID TitleProc(VOID);							//	タイトル画面（処理）
+VOID TitleDraw(VOID);							//	タイトル画面（描画）
 
-VOID Play(VOID);							//	プレイ画面
-VOID PlayProc(VOID);						//	プレイ画面（処理）
-VOID PlayDraw(VOID);						//	プレイ画面（描画）
+VOID Play(VOID);								//	プレイ画面
+VOID PlayProc(VOID);							//	プレイ画面（処理）
+VOID PlayDraw(VOID);							//	プレイ画面（描画）
 
-VOID End(VOID);								//	エンド画面
-VOID EndProc(VOID);							//	エンド画面（処理）
-VOID EndDraw(VOID);							//	エンド画面（描画）
+VOID End(VOID);									//	エンド画面
+VOID EndProc(VOID);								//	エンド画面（処理）
+VOID EndDraw(VOID);								//	エンド画面（描画）
 
-VOID EndOver(VOID);							//ゲームオーバー画面
-VOID EndOverProc(VOID);						//ゲームオーバー画面（処理）
-VOID EndOverDraw(VOID);						//ゲームオーバー画面（描画）
+VOID EndOver(VOID);								//ゲームオーバー画面
+VOID EndOverProc(VOID);							//ゲームオーバー画面（処理）
+VOID EndOverDraw(VOID);							//ゲームオーバー画面（描画）
 
-VOID Change(VOID);							//	切り替え画面
-VOID ChangeProc(VOID);						//	切り替え画面（処理）
-VOID ChangeDraw(VOID);						//	切り替え画面（描画）
+VOID Change(VOID);								//	切り替え画面
+VOID ChangeProc(VOID);							//	切り替え画面（処理）
+VOID ChangeDraw(VOID);							//	切り替え画面（描画）
 
-VOID ChangeScene(GAME_SCENE scene);			//シーン切り替え
+VOID ChangeScene(GAME_SCENE scene);				//シーン切り替え
 
-VOID CollUpdatePlayer(CHARACTOR* chara);	//当たり判定の領域を更新
+VOID CollUpdatePlayer(CHARACTOR* chara);		//当たり判定の領域を更新
+VOID CollUpdate(CHARACTOR* chara);				//当たり判定
 
-VOID CollUpdate(CHARACTOR* chara);			//当たり判定
+BOOL OnCollRect(RECT A, RECT B);				//矩形と矩形の当たり判定
 
-BOOL OnCollRect(RECT A, RECT B);			//矩形と矩形の当たり判定
-
-BOOL GameLoad(VOID);						//ゲームのデータの読み込み
-
-VOID GameInit(VOID);						//ゲームデータの初期化
+BOOL GameLoad(VOID);							//ゲームのデータの読み込み
 
 BOOL LoadImageMem(IMAGE* image, const char* path);								//画像の読み込み
-
 BOOL LoadAudio(AUDIO* audio, const char* path, int volume, int playType);	//ゲームの音楽を読み込み
+BOOL LoadImageDivMem(int* handle, const char* path, int bunkatuYoko, int bunkatuTate);	//ゲーム画像の分割読み込み
+
+VOID GameInit(VOID);							//ゲームデータの初期化
 
 
 
@@ -250,6 +257,8 @@ int WINAPI WinMain(
 		ScreenFlip();			//ダブルバッファリングした画面を描画
 	}
 
+	//読み込んだ画像を解放
+	for (int i = 0; i < TAMA_DIV_MAX; i++) { DeleteGraph(Tama[i]); }
 	
 
 	DxLib_End();				// ＤＸライブラリ使用の終了処理
@@ -263,9 +272,75 @@ int WINAPI WinMain(
 /// <returns>読み込めたら TRUE / 読み込めたら FALSE</returns>
 BOOL GameLoad(VOID)
 {
+	if (LoadImageDivMem(&Tama[0], ".\\image\\tama.png", 4, 1) == FALSE) { return FALSE; }
 	
 	return TRUE;	//すべて読み込めた
 	
+}
+
+/// <summary>
+/// 画像を分割してメモリに読み込み
+/// </summary>
+/// <param name="handle">ハンドル配列の先頭アドレス</param>
+/// <param name="path">画像のパス</param>
+/// <param name="bunkatuYoko">分割するときの横の数</param>
+/// <param name="bunkatuTate">分割するときの縦の数</param>
+/// <returns></returns>
+BOOL LoadImageDivMem(int* handle, const char* path, int bunkatuYoko, int bunkatuTate)
+{
+
+	
+
+	//弾の読み込み
+	int IsTamaLoad = -1;			//画像が読み込めたか？
+
+	//一時的に使うハンドルを用意する
+	int TamaHandle = LoadGraph(path);
+
+	//読み込みエラー
+	if (TamaHandle == -1)
+	{
+		MessageBox(
+			GetMainWindowHandle(),	//ウィンドウハンドル
+			path,					//本文
+			"画像読み込みエラー",	//タイトル
+			MB_OK					//ボタン
+		);
+
+		return FALSE;				//読み込み失敗
+	}
+
+	//画像の幅と高さを取得
+	int TamaWidth = -1;				//幅
+	int TamaHeight = -1;			//高さ
+	GetGraphSize(TamaHandle, &TamaWidth, &TamaHeight);
+
+	//分割して読み込み
+	IsTamaLoad = LoadDivGraph(
+		".\\image\\tama.png",								//画像のパス
+		TAMA_DIV_MAX,										//分割総数
+		bunkatuYoko, bunkatuTate,							//横の分割、縦の分割
+		TamaWidth / bunkatuYoko, TamaHeight / bunkatuTate,	//画像1つ分の幅、高さ
+		handle												//連続で管理する配列の先頭アドレス
+	);
+
+	//分割エラー
+	if (TamaHandle == -1)
+	{
+		MessageBox(
+			GetMainWindowHandle(),	//ウィンドウハンドル
+			path,					//本文
+			"画像読み込みエラー",	//タイトル
+			MB_OK					//ボタン
+		);
+
+		return FALSE;				//読み込み失敗
+	}
+
+	//一時的に読み込んだハンドルを解放
+	DeleteGraph(TamaHandle);
+
+	return TRUE;
 }
 
 /// <summary>
@@ -328,7 +403,28 @@ VOID TitleProc(VOID)
 /// </summary>
 VOID TitleDraw(VOID)
 {
-	DrawString(0, 0, "タイトル画面", GetColor(255, 0, 0));
+	//弾の描画
+	DrawGraph(0, 0, Tama[TamaIndex], TRUE);
+
+	if (TanaChangeCnt < TanaChangeCntMax)
+	{
+		TanaChangeCnt++;
+	}
+	else
+	{
+		//弾の添字が弾の分割数の最大よりも下のとき
+		if (TamaIndex < TAMA_DIV_MAX - 1)
+		{
+			TamaIndex++;	//次の画像へ
+		}
+		else
+		{
+			TamaIndex = 0;	//最初に戻す
+		}
+		TanaChangeCnt = 0;
+	}
+
+	DrawString(0, 0, "タイトル画面", GetColor(0, 0, 0));
 
 	return;
 }
@@ -368,7 +464,7 @@ VOID PlayProc(VOID)
 /// </summary>
 VOID PlayDraw(VOID)
 {
-	DrawString(0, 0, "プレイ画面", GetColor(255, 0, 0));
+	DrawString(0, 0, "プレイ画面", GetColor(0, 0, 0));
 	
 	return;
 }
@@ -408,7 +504,7 @@ VOID EndProc(VOID)
 /// </summary>
 VOID EndDraw(VOID)
 {
-	DrawString(0, 0, "エンド画面", GetColor(255, 0, 0));
+	DrawString(0, 0, "エンド画面", GetColor(0, 0, 0));
 	
 	return;
 }
@@ -451,7 +547,7 @@ VOID EndOverProc(VOID)
 /// </summary>
 VOID EndOverDraw(VOID)
 {
-	DrawString(0, 0, "ゲームオーバー画面", GetColor(255, 0, 0));
+	DrawString(0, 0, "ゲームオーバー画面", GetColor(0, 0, 0));
 
 	return;
 }
@@ -551,12 +647,12 @@ VOID ChangeDraw(VOID)
 	}
 
 	//四角を描画
-	DrawBox(0, 0, GAME_WIDTH, GAME_HEIGHT, GetColor(255, 255, 0), TRUE);
+	DrawBox(0, 0, GAME_WIDTH, GAME_HEIGHT, GetColor(0, 0, 0), TRUE);
 
 	//半透明終了
 	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 
-	DrawString(0, 0, "切り替え画面", GetColor(255, 0, 0));
+	DrawString(0, 0, "切り替え画面", GetColor(0, 0, 0));
 	
 	return;
 }
@@ -669,3 +765,5 @@ BOOL LoadImageMem(IMAGE* image, const char* path)
 	//読み込めた
 	return TRUE;
 }
+
+
