@@ -6,11 +6,13 @@
 
 #include "FPS.h"			//FPSの処理
 
+#include <math.h>			//数学
+
 //構造体の定義
 
 //マクロ定義
-#define TAMA_DIV_MAX	4	//弾の画像の最大数
-#define TAMA_MAX		10	//弾の総数
+#define TAMA_DIV_MAX	6	//弾の画像の最大数
+#define TAMA_MAX		150	//弾の総数
 
 //画像の構造体
 struct IMAGE
@@ -31,7 +33,7 @@ struct CHARACTOR
 {
 	IMAGE img;				//画像構造体
 
-	int speed = 1;			//移動速度
+	int speed = 50;			//移動速度
 
 	RECT coll;				//当たり判定の領域(四角)
 
@@ -77,6 +79,12 @@ struct TAMA
 
 	int NowIndex = 0;		//現在の画像の要素数
 
+	int StartX;				//X最初の位置
+	int StartY;				//Y最初の位置
+
+	float radius;			//半径
+	float degree;			//角度
+
 	int x;					//X位置
 	int y;					//Y位置
 	int width;				//幅
@@ -120,6 +128,9 @@ struct TAMA tama[TAMA_MAX];						//実際に使う
 int tamaShotCnt = 0;
 int tamaShotCntMAX = 5;
 
+//プレイヤー
+CHARACTOR player;
+
 //プロトタイプ宣言
 VOID Title(VOID);								//	タイトル画面
 VOID TitleProc(VOID);							//	タイトル画面（処理）
@@ -158,6 +169,7 @@ BOOL LoadImageDivMem(int* handle, const char* path, int bunkatuYoko, int bunkatu
 VOID GameInit(VOID);							//ゲームデータの初期化
 
 VOID DrawTama(TAMA* tama);						//弾の描画
+VOID ShotTama(TAMA* tama, float deg);			//弾の発射
 
 
 // プログラムは WinMain から始まります
@@ -321,7 +333,7 @@ BOOL GameLoad(VOID)
 	tama_moto.x = GAME_WIDTH / 2 - tama_moto.width / 2;	//中央揃え
 	tama_moto.y = GAME_HEIGHT / 2 - tama_moto.height;	//画面下
 
-	tama_moto.speed = 1;	//速度
+	tama_moto.speed = 50;	//速度
 
 	//アニメを変える速度
 	tama_moto.speed = 10;
@@ -337,6 +349,14 @@ BOOL GameLoad(VOID)
 	{
 		tama[i] = tama_moto;
 	}
+
+	//プレイヤーの画像を読み込み
+	if (LoadImageMem(&player.img, ".\\image\\player.png") == FALSE) { return FALSE; }
+	player.img.x = GAME_WIDTH / 2 - player.img.width;		//画面中央
+	player.img.y = GAME_HEIGHT / 2 - player.img.height;		//画面中央
+
+	CollUpdatePlayer(&player);		//当たり判定の更新
+	player.img.IsDraw = TRUE;		//描画する
 
 	return TRUE;	//すべて読み込めた
 	
@@ -411,6 +431,12 @@ BOOL LoadImageDivMem(int* handle, const char* path, int bunkatuYoko, int bunkatu
 VOID GameInit(VOID)
 {
 	
+	//プレイヤーの初期化
+	player.img.x = GAME_WIDTH / 2 - player.img.width / 2;		//画面中央
+	player.img.y = GAME_HEIGHT / 2 - player.img.height / 2;		//画面中央
+
+	CollUpdatePlayer(&player);		//当たり判定の更新
+	player.img.IsDraw = TRUE;		//描画する
 
 }
 
@@ -530,6 +556,45 @@ VOID PlayProc(VOID)
 		ChangeScene(GAME_SCENE_END);
 	}
 
+	//プレイヤーを操作する
+	if (KeyDown(KEY_INPUT_LEFT) == TRUE)
+	{
+		if (player.img.x - player.speed >= 0)
+		{
+			player.img.x -= player.speed;
+		}
+	}
+
+	//プレイヤーを操作する
+	if (KeyDown(KEY_INPUT_RIGHT) == TRUE)
+	{
+		if (player.img.x + player.speed <= GAME_WIDTH)
+		{
+			player.img.x += player.speed;
+		}
+	}
+
+	//プレイヤーを操作する
+	if (KeyDown(KEY_INPUT_UP) == TRUE)
+	{
+		if (player.img.y - player.speed >= 0)
+		{
+			player.img.y -= player.speed;
+		}
+	}
+
+	//プレイヤーを操作する
+	if (KeyDown(KEY_INPUT_DOWN) == TRUE)
+	{
+		if (player.img.y + player.speed <= GAME_HEIGHT)
+		{
+			player.img.y += player.speed;
+		}
+	}
+
+	//プレイヤーの当たり判定の更新
+	CollUpdatePlayer(&player);
+
 	//スペースキーを押しているとき
 	if (KeyDown(KEY_INPUT_SPACE) == TRUE)
 	{
@@ -540,21 +605,39 @@ VOID PlayProc(VOID)
 			{
 				if (tama[i].IsDraw == FALSE)
 				{
-					//弾を発射する
-					tama[i].IsDraw = TRUE;
-
-					//弾の位置を決める
-					tama[i].x = GAME_WIDTH / 2 - tama[i].width / 2;
-					tama[i].y = GAME_HEIGHT / 2 - tama[i].height / 2;
-
-					//弾の当たり判定の更新
-					CollUpdateTama(&tama[i]);
+					ShotTama(&tama[i], 270.0f);
 
 					//弾を1発出したらループを抜ける、
 					break;
 				}
 			}
+
+			//弾を発射する（弾を描画する）
+			for (int i = 0; i < TAMA_MAX; i++)
+			{
+				if (tama[i].IsDraw == FALSE)
+				{
+					ShotTama(&tama[i], 240.0f);
+
+					//弾を1発出したらループを抜ける、
+					break;
+				}
+			}
+
+			//弾を発射する（弾を描画する）
+			for (int i = 0; i < TAMA_MAX; i++)
+			{
+				if (tama[i].IsDraw == FALSE)
+				{
+					ShotTama(&tama[i], 300.0f);
+
+					//弾を1発出したらループを抜ける、
+					break;
+				}
+			}
+
 		}
+
 
 		//弾の発射待ち
 		if (tamaShotCnt < tamaShotCntMAX)
@@ -576,8 +659,14 @@ VOID PlayProc(VOID)
 	{
 		if (tama[i].IsDraw == TRUE)
 		{
+			//弾の位置を修正
 			//tama[i].x;
-			tama[i].y -= tama[i].speed;
+						//中心位置　＋ 飛ばす角度→飛ばす距離を計算　＊　距離
+			tama[i].x = tama[i].StartX + cos(tama[i].degree * DX_PI / 180.0f) * tama[i].radius;	//弾を斜めに飛ばす場合、弧度法を使用する。　公式： ( θ * π / 180.0f )
+			tama[i].y = tama[i].StartY + sin(tama[i].degree * DX_PI / 180.0f) * tama[i].radius;	//弾を斜めに飛ばす場合、弧度法を使用する。　公式： ( θ * π / 180.0f )
+
+			//半径を足す
+			tama[i].radius += tama[i].speed;
 
 			//画面外に出たら、描画しない
 			if (tama[i].y + tama[i].height < 0 ||		//画面外（ 上 ）
@@ -594,10 +683,51 @@ VOID PlayProc(VOID)
 }
 
 /// <summary>
+/// 弾を飛ばす
+/// </summary>
+VOID ShotTama(TAMA* tama,float deg)
+{
+		//弾を発射する
+		tama->IsDraw = TRUE;
+
+		//弾の位置を決める
+		tama->StartX = player.img.x + player.img.width / 2 - tama->width / 2;
+		tama->StartY = player.img.y;
+
+		//弾の速度を変える
+		tama->speed = 50;
+
+		//弾の角度
+		tama->degree = deg;
+
+		//弾の半径
+		tama->radius = 0.0f;
+
+		//弾の当たり判定の更新
+		CollUpdateTama(tama);
+}
+
+/// <summary>
 /// プレイ画面の描画
 /// </summary>
 VOID PlayDraw(VOID)
 {
+
+	//プレイヤーの描画
+	if (player.img.IsDraw == TRUE)
+	{
+		//プレイヤーの描画
+		DrawGraph(player.img.x, player.img.y, player.img.handle, TRUE);
+
+		//当たり判定
+		if (GAME_DEBUG == TRUE)
+		{
+			DrawBox(
+				player.coll.left, player.coll.top, player.coll.right, player.coll.bottom,
+				GetColor(255, 0, 0), FALSE
+			);
+		}
+	}
 
 	//弾の描画
 	for (int i = 0; i < TAMA_MAX; i++)
@@ -606,6 +736,15 @@ VOID PlayDraw(VOID)
 		if (tama[i].IsDraw == TRUE)
 		{
 			DrawTama(&tama[i]);
+
+			//当たり判定
+			if (GAME_DEBUG == TRUE)
+			{
+				DrawBox(
+					tama[i].coll.left, tama[i].coll.top, tama[i].coll.right, tama[i].coll.bottom,
+					GetColor(255, 0, 0), FALSE
+				);
+			}
 		}
 	}
 
@@ -808,10 +947,10 @@ VOID ChangeDraw(VOID)
 /// <param name="Coll"></param>
 VOID CollUpdatePlayer(CHARACTOR* chara)
 {
-	chara->coll.left = chara->img.x + 25;						//当たり判定を微調整
-	chara->coll.top = chara->img.y + 15;						//当たり判定を微調整
-	chara->coll.right = chara->img.x + chara->img.width - 15;		//当たり判定を微調整
-	chara->coll.bottom = chara->img.y + chara->img.height - 5;		//当たり判定を微調整
+	chara->coll.left = chara->img.x + 30;								//当たり判定を微調整
+	chara->coll.top = chara->img.y;										//当たり判定を微調整
+	chara->coll.right = chara->img.x + chara->img.width - 30;			//当たり判定を微調整
+	chara->coll.bottom = chara->img.y + chara->img.height;				//当たり判定を微調整
 
 	return;
 }
