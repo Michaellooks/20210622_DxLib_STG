@@ -15,7 +15,7 @@
 
 //ƒ}ƒNƒ’è‹`
 #define TAMA_DIV_MAX	6	//’e‚Ì‰æ‘œ‚ÌÅ‘å”
-#define TAMA_MAX		60	//’e‚Ì‘”
+#define TAMA_MAX		150	//’e‚Ì‘”
 
 #define TEKI_MAX		10	//“G‚Ì”
 #define TEKI_KIND		8	//“G‚Ìí—Ş
@@ -664,7 +664,6 @@ VOID PlayProc(VOID)
 		return;
 	}
 
-	/*
 	//ƒvƒŒƒCƒ„[‚ğ‘€ì‚·‚é
 	if (KeyDown(KEY_INPUT_LEFT) == TRUE)
 	{
@@ -700,17 +699,12 @@ VOID PlayProc(VOID)
 			player.img.y += player.speed;
 		}
 	}
-	*/
-
-	player.img.x = mouse.Point.x - player.img.width / 2;	//ƒ}ƒEƒX‚ÌˆÊ’u‚ğ‰æ‘œ’†S‚É‚·‚é
-	player.img.y = mouse.Point.y - player.img.height / 2;	//ƒ}ƒEƒX‚ÌˆÊ’u‚ğ‰æ‘œ’†S‚É‚·‚é
 
 	//ƒvƒŒƒCƒ„[‚Ì“–‚½‚è”»’è‚ÌXV
 	CollUpdatePlayer(&player);
 
 	//ƒXƒy[ƒXƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚é‚Æ‚«
 	//if (KeyDown(KEY_INPUT_SPACE) == TRUE)
-
 	if(MouseDown(MOUSE_INPUT_LEFT) == TRUE)
 	{
 		if (tamaShotCnt == 0)
@@ -835,7 +829,7 @@ VOID PlayProc(VOID)
 				if (tama[cnt].IsDraw == TRUE)
 				{
 					//“–‚½‚è”»’è
-					if (OnCollRect(teki[i].coll, teki[cnt].coll) == TRUE)
+					if (OnCollRect(teki[i].coll, teki[i].coll) == TRUE)
 					{
 						tama[cnt].IsDraw = FALSE;		//’e‚Ì•`‰æ‚Í‚µ‚È‚¢
 						teki[i].img.IsDraw = FALSE;	//“G‚Ì•`‰æ‚Í‚µ‚È‚¢
@@ -864,7 +858,7 @@ VOID ShotTama(TAMA* tama,float deg)
 		tama->StartY = player.img.y;
 
 		//’e‚Ì‘¬“x‚ğ•Ï‚¦‚é
-		tama->speed = 10;
+		tama->speed = 50;
 
 		//’e‚ÌŠp“x
 		tama->degree = deg;
