@@ -11,14 +11,15 @@
 #include "mouse.h"			//マウスの処理
 #include "shape.h"
 
-//構造体の定義
+
 
 //マクロ定義
 #define TAMA_DIV_MAX	6	//弾の画像の最大数
-#define TAMA_MAX		60	//弾の総数
-
-#define TEKI_MAX		10	//敵の数
+#define TAMA_MAX		100	//弾の総数
 #define TEKI_KIND		8	//敵の種類
+#define TEKI_MAX		10	//敵の数
+
+//構造体の定義
 
 //画像の構造体
 struct IMAGE
@@ -39,7 +40,7 @@ struct CHARACTOR
 {
 	IMAGE img;				//画像構造体
 
-	int speed = 30;			//移動速度
+	int speed = 1;			//移動速度
 
 	RECT coll;				//当たり判定の領域(四角)
 
@@ -126,7 +127,7 @@ int fadeInCntInit = fadeTimeMax;				//初期値
 int fadeInCnt = fadeInCntInit;					//フェードアウトのカウンタ
 int fadeInCntMax = fadeTimeMax;					//フェードアウトのカウンタMAX
 
-//弾の構造体変数
+//弾の構造体
 struct TAMA tama_moto;							//元
 struct TAMA tama[TAMA_MAX];						//実際に使う
 
@@ -385,7 +386,7 @@ BOOL GameLoad(VOID)
 	tama_moto.x = GAME_WIDTH / 2 - tama_moto.width / 2;	//中央揃え
 	tama_moto.y = GAME_HEIGHT / 2 - tama_moto.height;	//画面下
 
-	tama_moto.speed = 50;	//速度
+	tama_moto.speed = 1;	//速度
 
 	//アニメを変える速度
 	tama_moto.speed = 10;
@@ -618,7 +619,7 @@ VOID DrawTama(TAMA* tama)
 		}
 		else
 		{
-			//弾の添字が弾の分割数の最大よりも下のとき
+			//弾の添字が弾の分割数の最大よりも小さい時
 			if (tama->NowIndex < TAMA_DIV_MAX - 1)
 			{
 				tama->NowIndex++;	//次の画像へ
@@ -627,6 +628,7 @@ VOID DrawTama(TAMA* tama)
 			{
 				tama->NowIndex = 0;	//最初に戻す
 			}
+
 			tama->AnimeCnt = 0;
 		}
 	}
@@ -720,7 +722,7 @@ VOID PlayProc(VOID)
 			{
 				if (tama[i].IsDraw == FALSE)
 				{
-					ShotTama(&tama[i], 270.0f);
+					ShotTama(&tama[i], 270);
 
 					//弾を1発出したらループを抜ける、
 					break;
@@ -781,19 +783,19 @@ VOID PlayProc(VOID)
 	{
 		TekiAddCnt = 0;
 
-		//敵の生成
+		//敵を生成
 		for (int i = 0; i < TEKI_MAX; i++)
 		{
 			//描画されていない敵を探す
 			if (teki[i].img.IsDraw == FALSE)
 			{
-				int Bunkatsu = 10;	//画面の横分割数
+				int Bunkatu = 10;	//画面の横分割数
 
 				if (Score < 1000)
 				{
 					teki[i] = teki_moto[0];
 				}
-				if (Score < 2000)
+				else if (Score < 2000)
 				{
 					teki[i] = teki_moto[1];
 				}
@@ -802,7 +804,7 @@ VOID PlayProc(VOID)
 					teki[i] = teki_moto[GetRand(TEKI_KIND - 1)];
 				}
 
-				teki[i].img.x = GetRand(Bunkatsu - 1) * GAME_WIDTH / Bunkatsu;
+				teki[i].img.x = GetRand(Bunkatu - 1) * GAME_WIDTH / Bunkatu;
 				teki[i].img.y = -teki[i].img.height;
 
 				teki[i].img.IsDraw = TRUE;	//描画する
@@ -835,12 +837,12 @@ VOID PlayProc(VOID)
 				if (tama[cnt].IsDraw == TRUE)
 				{
 					//当たり判定
-					if (OnCollRect(teki[i].coll, teki[cnt].coll) == TRUE)
+					if (OnCollRect(teki[i].coll, tama[cnt].coll) == TRUE)
 					{
 						tama[cnt].IsDraw = FALSE;		//弾の描画はしない
-						teki[i].img.IsDraw = FALSE;	//敵の描画はしない
+						teki[i].img.IsDraw = FALSE;		//敵の描画もしない
 
-						Score += 100;
+						Score += 100;					//スコア加算
 					}
 				}
 			}
