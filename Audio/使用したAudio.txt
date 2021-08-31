@@ -1,0 +1,7 @@
+meteor.wav = Title_Audio.wav
+
+gradient.wav = Play_Audio.wav
+
+jinsei.wav = End_Audio.wav
+
+ninja.wav = Over_Audio.wav

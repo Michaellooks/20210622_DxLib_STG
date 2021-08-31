@@ -127,6 +127,13 @@ int fadeInCntInit = fadeTimeMax;				//初期値
 int fadeInCnt = fadeInCntInit;					//フェードアウトのカウンタ
 int fadeInCntMax = fadeTimeMax;					//フェードアウトのカウンタMAX
 
+//PushEnterの点滅
+int PushEnterCnt = 0;				//カウンタ
+//int PushEnterCntMAX = 60;			//カウンタMAX値
+const int PushEnterCntMAX = 100;		//カウンタMAX値
+BOOL PushEnterBrink = FALSE;		//点滅しているか
+
+
 //弾の構造体
 struct TAMA tama_moto;							//元
 struct TAMA tama[TAMA_MAX];						//実際に使う
@@ -140,6 +147,21 @@ CHARACTOR player;
 
 //背景画像
 IMAGE back[2];	//背景は2つの画像
+
+//画像を読み込む
+IMAGE TitleLogo;			//タイトルロゴ
+IMAGE TitleEnter;			//エンターキーを押す
+IMAGE EndGameOver;			//ゲームオーバーロゴ
+IMAGE EndClear;				//クリアロゴ
+IMAGE EndClearUnderline;	//クリアロゴの下線
+
+IMAGE Background;	//背景
+
+//音楽
+AUDIO TitleBGM;
+AUDIO PlayBGM;
+AUDIO EndBGM;
+AUDIO EndOverBGM;
 
 //敵のデータ(元) = 種類
 CHARACTOR teki_moto[TEKI_KIND];
@@ -351,6 +373,19 @@ int WINAPI WinMain(
 	DeleteGraph(back[0].handle);
 	DeleteGraph(back[1].handle);
 
+	DeleteGraph(TitleLogo.handle);				//画像をメモリ上から削除
+	DeleteGraph(TitleEnter.handle);				//画像をメモリ上から削除
+	DeleteGraph(EndClear.handle);				//画像をメモリ上から削除
+	DeleteGraph(EndGameOver.handle);		//画像をメモリ上から削除
+
+	DeleteGraph(Background.handle);		//画像をメモリ上から削除
+
+	DeleteSoundMem(TitleBGM.handle);	//音楽をメモリ上からっ削除
+	DeleteSoundMem(PlayBGM.handle);		//音楽をメモリ上からっ削除
+	DeleteSoundMem(EndBGM.handle);		//音楽をメモリ上からっ削除
+	DeleteSoundMem(EndOverBGM.handle);		//音楽をメモリ上からっ削除
+
+
 	//敵の画像の解放
 	for (int i = 0; i < TEKI_KIND; i++)
 	{
@@ -434,6 +469,22 @@ BOOL GameLoad(VOID)
 		CollUpdatePlayer(&teki_moto[i]);		//当たり判定の更新
 		teki_moto[i].img.IsDraw = FALSE;		//描画しない
 	}
+
+	//背景を読み込み
+	if (!LoadImageMem(&Background, ".\\Image\\haikei.png")) { return FALSE; }
+
+	//ロゴを読み込み
+	if (!LoadImageMem(&TitleLogo, ".\\Image\\title.png")) { return FALSE; }
+	if (!LoadImageMem(&TitleEnter, ".\\Image\\pushenter.png")) { return FALSE; }
+	if (!LoadImageMem(&EndClear, ".\\Image\\clear.png")) { return FALSE; }
+	if (!LoadImageMem(&EndGameOver, ".\\Image\\over.png")) { return FALSE; }
+
+	//音楽の読み込み
+	if (!LoadAudio(&TitleBGM, ".\\AUDIO\\Title_Audio.wav", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+	if (!LoadAudio(&PlayBGM, ".\\AUDIO\\Play_Audio.wav", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+	if (!LoadAudio(&EndBGM, ".\\AUDIO\\End_Audio.wav", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+	if (!LoadAudio(&EndOverBGM, ".\\AUDIO\\Over_Audio.wav", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+
 
 	return TRUE;	//すべて読み込めた
 	
@@ -537,6 +588,28 @@ VOID GameInit(VOID)
 		teki_moto[i].img.IsDraw = FALSE;		//描画しない
 	}
 
+	//タイトルロゴの位置を決める
+	TitleLogo.x = GAME_WIDTH / 2 - TitleLogo.width / 2;			//中央揃え
+	TitleLogo.y = 1;
+
+	//PushEnterの位置を決める
+	TitleEnter.x = GAME_WIDTH / 2 - TitleEnter.width / 2;		//中央揃え
+	TitleEnter.y = GAME_HEIGHT - TitleEnter.height - 50;
+
+	//ClearLogoの位置を決める
+	EndClear.x = GAME_WIDTH / 2 - EndClear.width / 2;			//中央揃え
+	EndClear.y = GAME_HEIGHT / 2 - EndClear.height / 2;			//中央揃え
+
+	//GameOverの位置を決める
+	EndGameOver.x = GAME_WIDTH / 2 - EndGameOver.width / 2;				//中央揃え
+	EndGameOver.y = GAME_HEIGHT / 2 - EndGameOver.height / 2;			//中央揃え
+
+	//PushEnterの点滅
+	PushEnterCnt = 0;
+	//PushEnterCntMAX = 60; //初期化をしなくても良い？
+	PushEnterBrink = FALSE;
+
+
 }
 
 /// <summary>
@@ -568,9 +641,19 @@ VOID Title(VOID)
 /// </summary>
 VOID TitleProc(VOID)
 {
+	//BGMが流れていないとき
+	if (CheckSoundMem(TitleBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(TitleBGM.handle, TitleBGM.playType);
+	}
+
 	//プレイシーンへ切り替える
 	if (KeyClick(KEY_INPUT_RETURN) == TRUE)
 	{
+		//BGMを止める
+		StopSoundMem(TitleBGM.handle);
+
 		//シーン切り替え
 		//次のシーンの初期化をここで行うと楽
 
@@ -594,8 +677,49 @@ VOID TitleProc(VOID)
 /// </summary>
 VOID TitleDraw(VOID)
 {
-
 	DrawString(0, 0, "タイトル画面", GetColor(0, 0, 0));
+
+	//タイトルロゴの描画
+	DrawGraph(Background.x, Background.y, Background.handle, TRUE);
+
+	//タイトルロゴの描画
+	DrawGraph(TitleLogo.x, TitleLogo.y, TitleLogo.handle, TRUE);
+
+	//MAX値まで待つ
+	if (PushEnterCnt < PushEnterCntMAX) { PushEnterCnt++; }
+	else
+	{
+		if (PushEnterBrink == TRUE)PushEnterBrink = FALSE;
+		else if (PushEnterBrink == FALSE)PushEnterBrink = TRUE;
+
+		PushEnterCnt = 0;	//カウンタの初期化
+	}
+
+	if (PushEnterBrink == TRUE)
+	{
+		//半透明にする
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, ((float)PushEnterCnt / PushEnterCntMAX) * 255);
+
+		//PushEnterの描画
+		DrawGraph(TitleEnter.x, TitleEnter.y, TitleEnter.handle, TRUE);
+
+		//半透明終了
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	}
+
+	if (PushEnterBrink == FALSE)
+	{
+		//半透明にする
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, ((float)(PushEnterCntMAX - PushEnterCnt) / PushEnterCntMAX) * 255);
+
+		//PushEnterの描画
+		DrawGraph(TitleEnter.x, TitleEnter.y, TitleEnter.handle, TRUE);
+
+		//半透明終了
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	}
+
+
 	return;
 }
 
@@ -651,9 +775,19 @@ VOID Play(VOID)
 /// </summary>
 VOID PlayProc(VOID)
 {
+	//BGMが流れていないとき
+	if (CheckSoundMem(PlayBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(PlayBGM.handle, PlayBGM.playType);
+	}
+
 	//エンドシーンへ切り替える
 	if (KeyClick(KEY_INPUT_RETURN) == TRUE)
 	{
+		//BGMを止める
+		StopSoundMem(PlayBGM.handle);
+
 		//シーン切り替え
 		//次のシーンの初期化をここで行うと楽
 
@@ -1003,10 +1137,19 @@ VOID End(VOID)
 /// </summary>
 VOID EndProc(VOID)
 {
+	//BGMが流れていないとき
+	if (CheckSoundMem(EndBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(EndBGM.handle, EndBGM.playType);
+	}
 
 	//タイトルシーンへ切り替える
 	if (KeyClick(KEY_INPUT_RETURN) == TRUE)
 	{
+		//BGMを止める
+		StopSoundMem(EndBGM.handle);
+
 		//シーン切り替え
 		//次のシーンの初期化をここで行うと楽
 
@@ -1022,6 +1165,9 @@ VOID EndProc(VOID)
 /// </summary>
 VOID EndDraw(VOID)
 {
+	//EndCler画面の描画
+	DrawGraph(EndClear.x, EndClear.y, EndClear.handle, TRUE);
+
 	DrawString(0, 0, "エンド画面", GetColor(0, 0, 0));
 	
 	return;
@@ -1043,12 +1189,18 @@ VOID EndOver(VOID)
 /// </summary>
 VOID EndOverProc(VOID)
 {
-	
+	//BGMが流れていないとき
+	if (CheckSoundMem(EndOverBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(EndOverBGM.handle, EndOverBGM.playType);
+	}
 
 	//タイトルシーンへ切り替える
 	if (KeyClick(KEY_INPUT_RETURN) == TRUE)
 	{
-		
+		//BGMを止める
+		StopSoundMem(EndOverBGM.handle);
 
 		//シーン切り替え
 		//次のシーンの初期化をここで行うと楽
@@ -1065,6 +1217,9 @@ VOID EndOverProc(VOID)
 /// </summary>
 VOID EndOverDraw(VOID)
 {
+	//GameOverの描画
+	DrawGraph(EndGameOver.x, EndGameOver.y, EndGameOver.handle, TRUE);
+
 	DrawString(0, 0, "ゲームオーバー画面", GetColor(0, 0, 0));
 
 	return;
