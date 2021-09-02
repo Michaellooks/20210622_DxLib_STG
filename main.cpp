@@ -1165,6 +1165,9 @@ VOID EndProc(VOID)
 /// </summary>
 VOID EndDraw(VOID)
 {
+	//”wŒi
+	DrawGraph(Background.x, Background.y, Background.handle, TRUE);
+
 	//EndCler‰æ–Ê‚Ì•`‰æ
 	DrawGraph(EndClear.x, EndClear.y, EndClear.handle, TRUE);
 
